@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/maczh/tdengine"
 	"math/rand"
-	"tdengine"
 	"time"
 )
 
