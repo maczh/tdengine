@@ -3,12 +3,14 @@ package tdengine
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/sadlil/gologger"
 	_ "github.com/taosdata/driver-go/v2/taosSql"
 	"time"
 )
 
 var logger = gologger.GetLogger()
+
 type TDengine struct {
 	Dsn          string  `json:"dsn"`
 	DB           *sql.DB `json:"db"`
@@ -22,15 +24,15 @@ type Config struct {
 	MaxConnLifetime int
 }
 
-func New(dsn string) (TDengine, error) {
+func New(dsn string) (*TDengine, error) {
 	tdengine := TDengine{
 		Dsn: dsn,
 	}
 	err := tdengine.Connect()
-	return tdengine, err
+	return &tdengine, err
 }
 
-func (t TDengine) ConnPool(config Config) TDengine {
+func (t *TDengine) ConnPool(config Config) *TDengine {
 	if config.MaxIdelConns > 0 {
 		t.SetMaxIdelConns(config.MaxIdelConns)
 	}
@@ -46,7 +48,7 @@ func (t TDengine) ConnPool(config Config) TDengine {
 	return t
 }
 
-func (t TDengine) Connect() error {
+func (t *TDengine) Connect() error {
 	taos, err := sql.Open("taosSql", t.Dsn)
 	if err != nil {
 		logger.Error("TDengine connect error:" + err.Error())
@@ -56,7 +58,7 @@ func (t TDengine) Connect() error {
 	return err
 }
 
-func (t TDengine) SetMaxIdelConns(max int) TDengine {
+func (t *TDengine) SetMaxIdelConns(max int) *TDengine {
 	if t.DB == nil {
 		logger.Error("TDengine connect first")
 		return t
@@ -65,7 +67,7 @@ func (t TDengine) SetMaxIdelConns(max int) TDengine {
 	return t
 }
 
-func (t TDengine) SetMaxOpenConns(max int) TDengine {
+func (t *TDengine) SetMaxOpenConns(max int) *TDengine {
 	if t.DB == nil {
 		logger.Error("TDengine connect first")
 		return t
@@ -74,7 +76,7 @@ func (t TDengine) SetMaxOpenConns(max int) TDengine {
 	return t
 }
 
-func (t TDengine) SetIdleTimeout(timeout time.Duration) TDengine {
+func (t *TDengine) SetIdleTimeout(timeout time.Duration) *TDengine {
 	if t.DB == nil {
 		logger.Error("TDengine connect first")
 		return t
@@ -83,7 +85,7 @@ func (t TDengine) SetIdleTimeout(timeout time.Duration) TDengine {
 	return t
 }
 
-func (t TDengine) Ping() error {
+func (t *TDengine) Ping() error {
 	if t.DB == nil {
 		logger.Error("TDengine connect first")
 		return errors.New("TDengine unconnected")
@@ -95,7 +97,7 @@ func (t TDengine) Ping() error {
 	return err
 }
 
-func (t TDengine) SetConnLifetime(timeout time.Duration) TDengine {
+func (t *TDengine) SetConnLifetime(timeout time.Duration) *TDengine {
 	if t.DB == nil {
 		logger.Error("TDengine connect first")
 		return t
@@ -104,20 +106,24 @@ func (t TDengine) SetConnLifetime(timeout time.Duration) TDengine {
 	return t
 }
 
-func (t TDengine) Database(db string) TDengine {
+func (t *TDengine) Database(db string) *TDengine {
 	t.DatabaseName = db
+	_, err := t.DB.Exec(fmt.Sprintf("USE %s;", t.DatabaseName))
+	if err != nil {
+		logger.Error("TDengine database " + db + " not found: " + err.Error())
+	}
 	return t
 }
 
-func (t TDengine) Close() error {
+func (t *TDengine) Close() error {
 	return t.DB.Close()
 }
 
-func (t TDengine) STable(stable string) Session {
+func (t *TDengine) STable(stable string) *Session {
 	session := Session{
-		tdengine: &t,
-		Database: t.DatabaseName,
+		tdengine:   t,
+		Database:   t.DatabaseName,
 		SuperTable: stable,
 	}
-	return session
+	return &session
 }

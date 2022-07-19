@@ -9,7 +9,7 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-func ToJSON(o interface{}) string {
+func toJSON(o interface{}) string {
 	j, err := json.Marshal(o)
 	if err != nil {
 		return "{}"
@@ -22,10 +22,10 @@ func ToJSON(o interface{}) string {
 	}
 }
 
-func FromJSON(j string, o interface{}) *interface{} {
+func fromJSON(j string, o interface{}) *interface{} {
 	err := json.Unmarshal([]byte(j), &o)
 	if err != nil {
-		logger.Error("数据转换错误:"+err.Error())
+		logger.Error("数据转换错误:" + err.Error())
 		return nil
 	} else {
 		return &o
@@ -49,3 +49,13 @@ func CompactJSON(in string) string {
 	}
 	return out.String()
 }
+
+//func toMap(value interface{}) map[string]interface{} {
+//	obj := reflect.ValueOf(value)
+//	result := make(map[string]interface{})
+//	fieldCount := obj.NumField()
+//	for i := 0; i < fieldCount; i++ {
+//		f := obj.Field(i)
+//		result[f.Tag.Get("json")] = f.
+//	}
+//}
