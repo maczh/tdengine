@@ -3,7 +3,9 @@ package tdengine
 import (
 	"bytes"
 	j "encoding/json"
+	"errors"
 	jsoniter "github.com/json-iterator/go"
+	"reflect"
 	"strings"
 )
 
@@ -59,3 +61,39 @@ func CompactJSON(in string) string {
 //		result[f.Tag.Get("json")] = f.
 //	}
 //}
+func getValByTag(refVal reflect.Value, refType reflect.Type, tag string) (interface{}, reflect.Kind, error) {
+	//refVal := reflect.ValueOf(obj).Elem()
+	//refType := reflect.TypeOf(obj).Elem()
+	for i := 0; i < refVal.NumField(); i++ {
+		field := refType.Field(i)
+		if tag == field.Tag.Get("td") {
+			return refVal.Field(i).Interface(), field.Type.Kind(), nil
+		}
+	}
+	return nil, reflect.Int, errors.New("tag not found")
+}
+
+func getValueByTag(obj interface{}, tag string) (interface{}, reflect.Kind, error) {
+	refVal := reflect.ValueOf(obj).Elem()
+	refType := reflect.TypeOf(obj).Elem()
+	for i := 0; i < refVal.NumField(); i++ {
+		field := refType.Field(i)
+		if tag == field.Tag.Get("td") {
+			return refVal.Field(i).Interface(), field.Type.Kind(), nil
+		}
+	}
+	return nil, reflect.Int, errors.New("tag not found")
+}
+
+func setValueByTag(obj interface{}, tag string, v interface{}) error {
+	refVal := reflect.ValueOf(obj).Elem()
+	refType := reflect.TypeOf(obj).Elem()
+	for i := 0; i < refVal.NumField(); i++ {
+		field := refType.Field(i)
+		if tag == field.Tag.Get("td") {
+			refVal.Field(i).Set(reflect.ValueOf(v))
+			return nil
+		}
+	}
+	return errors.New("tag not found")
+}

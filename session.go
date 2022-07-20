@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 )
 
 type Session struct {
@@ -61,7 +62,7 @@ func (s *Session) Fields(fields []string) *Session {
 	return s
 }
 
-func (s *Session) Insert(value Meters) error {
+func (s *Session) Insert(value interface{}) error {
 	if s.table == "" {
 		return errors.New("Table name unseted")
 	}
@@ -75,14 +76,26 @@ func (s *Session) Insert(value Meters) error {
 	}
 	vals := "("
 	for _, meter := range s.meters {
-		v := value.GetMeter(meter)
-		switch v.(type) {
-		case string:
+		v, k, err := getValueByTag(value, meter)
+		if err != nil {
+			logger.Error(err.Error())
+			vals += "null,"
+		}
+		switch k.String() {
+		case "struct": //专门针对时间类型
+			if t, ok := v.(time.Time); ok {
+				vals += fmt.Sprintf("%d,", t.UnixMilli())
+			} else {
+				vals += fmt.Sprintf("'%s',", toJSON(v))
+			}
+		case "string":
 			vals += fmt.Sprintf("'%s',", v)
-		case int, int32, int64:
+		case "int", "int32", "int64":
 			vals += fmt.Sprintf("%d,", v)
-		case float32, float64:
+		case "float32", "float64":
 			vals += fmt.Sprintf("%f,", v)
+		default:
+			vals += fmt.Sprintf("%v,", v)
 		}
 	}
 	vals = vals[:len(vals)-1]
@@ -113,9 +126,12 @@ func (s *Session) Insert(value Meters) error {
 	return err
 }
 
-func (s *Session) InsertBatch(values []Meters) error {
+func (s *Session) InsertBatch(values interface{}) error {
 	if s.table == "" {
 		return errors.New("Table name unseted")
+	}
+	if values == nil {
+		return errors.New("values is nil")
 	}
 	var err error
 	if s.meters == nil || len(s.meters) == 0 {
@@ -124,20 +140,39 @@ func (s *Session) InsertBatch(values []Meters) error {
 			return err
 		}
 	}
+	if reflect.TypeOf(values).Kind() != reflect.Slice {
+		return errors.New("values is not a slice")
+	}
+	refValues := reflect.ValueOf(values)
+	refSlice := reflect.Indirect(refValues)
+
 	vals := ""
 	//val := []map[string]interface{}{}
 	//fromJSON(toJSON(values), &val)
-	for _, value := range values {
+	for i := 0; i < refSlice.Len(); i++ {
+		value := refSlice.Index(i)
 		vals += "("
 		for _, meter := range s.meters {
-			v := value.GetMeter(meter)
-			switch v.(type) {
-			case string:
+			v, k, err := getValByTag(value.Elem(), reflect.TypeOf(value).Elem(), meter)
+			if err != nil {
+				logger.Error(err.Error())
+				vals += "null,"
+			}
+			switch k.String() {
+			case "struct": //专门针对时间类型
+				if t, ok := v.(time.Time); ok {
+					vals += fmt.Sprintf("%d,", t.UnixMilli())
+				} else {
+					vals += fmt.Sprintf("'%s',", toJSON(v))
+				}
+			case "string":
 				vals += fmt.Sprintf("'%s',", v)
-			case int, int32, int64:
+			case "int", "int32", "int64":
 				vals += fmt.Sprintf("%d,", v)
-			case float32, float64:
+			case "float32", "float64":
 				vals += fmt.Sprintf("%f,", v)
+			default:
+				vals += fmt.Sprintf("%v,", v)
 			}
 		}
 		vals = vals[:len(vals)-1]
