@@ -144,18 +144,17 @@ func (s *Session) InsertBatch(values interface{}) error {
 		return errors.New("values is not a slice")
 	}
 	refValues := reflect.ValueOf(values)
-	refSlice := reflect.Indirect(refValues)
-
+	if refValues.Len() == 0 {
+		return errors.New("values is empty")
+	}
 	vals := ""
-	//val := []map[string]interface{}{}
-	//fromJSON(toJSON(values), &val)
-	for i := 0; i < refSlice.Len(); i++ {
-		value := refSlice.Index(i)
+	for i := 0; i < refValues.Len(); i++ {
+		value := refValues.Index(i)
 		vals += "("
 		for _, meter := range s.meters {
-			v, k, err := getValByTag(value.Elem(), reflect.TypeOf(value).Elem(), meter)
+			v, k, err := getValByTag(value, value.Type(), meter)
 			if err != nil {
-				logger.Error(err.Error())
+				logger.Error(meter + " " + err.Error())
 				vals += "null,"
 			}
 			switch k.String() {
@@ -287,9 +286,18 @@ func (s *Session) generateQuerySql() string {
 }
 
 func (s *Session) Find(result interface{}) error {
+	if result == nil {
+		return errors.New("result is nil")
+	}
 	rs := reflect.ValueOf(result)
+	if rs.Type().Kind() != reflect.Ptr {
+		return errors.New("result is not a pointer")
+	}
 	rsRow := reflect.Indirect(rs)
 	rsRowType := rsRow.Type().Elem()
+	if rsRow.Type().Kind() != reflect.Slice {
+		return errors.New("result is not a pointer of struct")
+	}
 	query := s.generateQuerySql()
 	if s.debug {
 		logger.Debug(query)
@@ -308,16 +316,30 @@ func (s *Session) Find(result interface{}) error {
 	}
 	for rows.Next() {
 		row := reflect.New(rsRowType)
+		if rsRowType.Kind() == reflect.Map {
+			row = reflect.MakeMap(rsRowType)
+		}
 		err = rows.Scan(rowValue...)
 		if err != nil {
 			logger.Error("数据提取错误:" + err.Error())
 		}
-		setMeter := row.MethodByName("SetMeter")
+		var r reflect.Value
 		for i, val := range rowV {
-			args := []reflect.Value{reflect.ValueOf(fields[i]), reflect.ValueOf(val)}
-			setMeter.Call(args)
+			switch rsRowType.Kind() {
+			case reflect.Map:
+				row.SetMapIndex(reflect.ValueOf(fields[i]), reflect.ValueOf(val))
+				r = row
+			case reflect.Struct:
+				err = setValByTag(row.Elem(), rsRowType, fields[i], val)
+				if err != nil {
+					logger.Error("setValByTag:" + err.Error())
+				}
+				r = row.Elem()
+			default:
+				logger.Error("upsupport result type,must be *[]struct or *[]map[string]interface{}")
+			}
 		}
-		rsRow.Set(reflect.Append(rsRow, row.Elem()))
+		rsRow.Set(reflect.Append(rsRow, r))
 	}
 	if s.debug {
 		//fmt.Printf("TDengin return: %v\n", rsMapList)
@@ -328,9 +350,19 @@ func (s *Session) Find(result interface{}) error {
 
 func (s *Session) FindOne(result interface{}) error {
 	s.Limit(1)
+	if result == nil {
+		return errors.New("result is nil")
+	}
 	rs := reflect.ValueOf(result)
+	if rs.Type().Kind() != reflect.Ptr {
+		return errors.New("result is not a pointer")
+	}
 	rsRow := reflect.Indirect(rs)
 	rsRowType := rs.Type().Elem()
+	//fmt.Printf("rs.Type().Kind()=%v,rsRowType.Kind()=%v\n",rs.Type().Kind(),rsRowType.Kind())
+	if rsRowType.Kind() != reflect.Struct && rsRowType.Kind() != reflect.Map {
+		return errors.New("result is not a pointer of struct or map")
+	}
 	query := s.generateQuerySql()
 	if s.debug {
 		logger.Debug(query)
@@ -349,19 +381,32 @@ func (s *Session) FindOne(result interface{}) error {
 	}
 	for rows.Next() {
 		row := reflect.New(rsRowType)
+		if rsRowType.Kind() == reflect.Map {
+			row = reflect.MakeMap(rsRowType)
+		}
 		err = rows.Scan(rowValue...)
 		if err != nil {
 			logger.Error("数据提取错误:" + err.Error())
 		}
-		setMeter := row.MethodByName("SetMeter")
+		var r reflect.Value
 		for i, val := range rowV {
-			args := []reflect.Value{reflect.ValueOf(fields[i]), reflect.ValueOf(val)}
-			setMeter.Call(args)
+			switch rsRowType.Kind() {
+			case reflect.Map:
+				row.SetMapIndex(reflect.ValueOf(fields[i]), reflect.ValueOf(val))
+				r = row
+			case reflect.Struct:
+				err = setValByTag(row.Elem(), rsRowType, fields[i], val)
+				if err != nil {
+					logger.Error("setValByTag:" + err.Error())
+				}
+				r = row.Elem()
+			default:
+				logger.Error("upsupport result type,must be *[]struct or *[]map[string]interface{}")
+			}
 		}
-		rsRow.Set(row.Elem())
+		rsRow.Set(r)
 	}
 	if s.debug {
-		//fmt.Printf("TDengin return: %v\n", rsMapList)
 		logger.Debug(toJSON(result))
 	}
 	return err

@@ -28,27 +28,27 @@ func New(dsn string) (*TDengine, error) {
 	tdengine := TDengine{
 		Dsn: dsn,
 	}
-	err := tdengine.Connect()
+	err := tdengine.connect()
 	return &tdengine, err
 }
 
 func (t *TDengine) ConnPool(config Config) *TDengine {
 	if config.MaxIdelConns > 0 {
-		t.SetMaxIdelConns(config.MaxIdelConns)
+		t.setMaxIdelConns(config.MaxIdelConns)
 	}
 	if config.MaxOpenConns > 0 {
-		t.SetMaxOpenConns(config.MaxOpenConns)
+		t.setMaxOpenConns(config.MaxOpenConns)
 	}
 	if config.MaxIdelTimeout > 0 {
-		t.SetIdleTimeout(time.Duration(config.MaxIdelTimeout) * time.Second)
+		t.setIdleTimeout(time.Duration(config.MaxIdelTimeout) * time.Second)
 	}
 	if config.MaxConnLifetime > 0 {
-		t.SetConnLifetime(time.Duration(config.MaxConnLifetime) * time.Second)
+		t.setConnLifetime(time.Duration(config.MaxConnLifetime) * time.Second)
 	}
 	return t
 }
 
-func (t *TDengine) Connect() error {
+func (t *TDengine) connect() error {
 	taos, err := sql.Open("taosSql", t.Dsn)
 	if err != nil {
 		logger.Error("TDengine connect error:" + err.Error())
@@ -58,7 +58,7 @@ func (t *TDengine) Connect() error {
 	return err
 }
 
-func (t *TDengine) SetMaxIdelConns(max int) *TDengine {
+func (t *TDengine) setMaxIdelConns(max int) *TDengine {
 	if t.DB == nil {
 		logger.Error("TDengine connect first")
 		return t
@@ -67,7 +67,7 @@ func (t *TDengine) SetMaxIdelConns(max int) *TDengine {
 	return t
 }
 
-func (t *TDengine) SetMaxOpenConns(max int) *TDengine {
+func (t *TDengine) setMaxOpenConns(max int) *TDengine {
 	if t.DB == nil {
 		logger.Error("TDengine connect first")
 		return t
@@ -76,7 +76,7 @@ func (t *TDengine) SetMaxOpenConns(max int) *TDengine {
 	return t
 }
 
-func (t *TDengine) SetIdleTimeout(timeout time.Duration) *TDengine {
+func (t *TDengine) setIdleTimeout(timeout time.Duration) *TDengine {
 	if t.DB == nil {
 		logger.Error("TDengine connect first")
 		return t
@@ -97,7 +97,7 @@ func (t *TDengine) Ping() error {
 	return err
 }
 
-func (t *TDengine) SetConnLifetime(timeout time.Duration) *TDengine {
+func (t *TDengine) setConnLifetime(timeout time.Duration) *TDengine {
 	if t.DB == nil {
 		logger.Error("TDengine connect first")
 		return t

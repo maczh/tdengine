@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/maczh/tdengine"
 	"math/rand"
-	"tdengine"
 	"time"
 )
 
@@ -56,14 +56,14 @@ func (t *traffic) SetMeter(field string, value interface{}) {
 }
 
 func main() {
-	tdenginDsn := "root:TDengine#2022@tcp(tdengine-server:6030)/cdn_traffic"
+	tdengineDsn := "root:TDengine#2022@tcp(tdengine-server:6030)/cdn_traffic"
 	config := tdengine.Config{
 		MaxIdelConns:    5,
 		MaxOpenConns:    20,
 		MaxIdelTimeout:  30,
 		MaxConnLifetime: 300,
 	}
-	td, err := tdengine.New(tdenginDsn)
+	td, err := tdengine.New(tdengineDsn)
 	if err != nil {
 		fmt.Printf("TDengine.New: %v\n", err.Error())
 	}
@@ -71,7 +71,7 @@ func main() {
 	td = td.ConnPool(config)
 	fmt.Println("插入测试,最近1小时，每5秒一条数据")
 	now := time.Now().Add(-1 * time.Hour)
-	rows := make([]trafficRow, 360)
+	rows := make([]trafficRow, 5)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 5; i++ {
 		now = now.Add(10 * time.Second)
@@ -80,7 +80,7 @@ func main() {
 	}
 	fmt.Println("单条插入测试，连续10条")
 	stable := td.STable("cdn_traffic").Debug()
-	table := stable.Table("test_com_downout")
+	//table := stable.Table("test_com_downout")
 	//for i := 0; i < 9; i++ {
 	//	err = table.Tags([]interface{}{".test.com", "DownOut"}).
 	//		Insert(&rows[i])
@@ -88,32 +88,33 @@ func main() {
 	//		fmt.Printf("单条%v --插入错误:%s\n", rows[i], err.Error())
 	//	}
 	//}
-	fmt.Println("批量插入测试")
-	err = table.InsertBatch(rows)
+	//fmt.Println("批量插入测试")
+	//err = table.InsertBatch(rows)
+	//if err != nil {
+	//	fmt.Printf("批量插入错误:%s\n", err.Error())
+	//}
+	fmt.Println("指标直接查询测试")
+	var rs []traffic
+	err = stable.NewQuery().Table("test_com_downout").Fields([]string{"time", "traffic"}).Where("time > ?", "2022-07-19 21:51:21").OrderBy("time DESC").Limit(5).Find(&rs)
 	if err != nil {
-		fmt.Printf("批量插入错误:%s\n", err.Error())
+		fmt.Printf("指标直接查询错误:%s\n", err.Error())
+		return
 	}
-	//fmt.Println("指标直接查询测试")
-	//var rs []traffic
-	//err = stable.NewQuery().Table("test_com_downout").Fields([]string{"time", "traffic"}).Where("time > ?", "2022-07-19 21:51:21").OrderBy("time DESC").Limit(5).Find(&rs)
-	//if err != nil {
-	//	fmt.Printf("指标直接查询错误:%s\n", err.Error())
-	//	return
-	//}
-	//fmt.Printf("查询结果:%v\n", rs)
-	//fmt.Println("查询单条结果测试")
-	//var row traffic
-	//err = stable.NewQuery().Table("test_com_downout").Fields([]string{"time", "traffic"}).Where("time > ?", "2022-07-19 21:51:21").OrderBy("time DESC").FindOne(&row)
-	//if err != nil {
-	//	fmt.Printf("指标直接查询错误:%s\n", err.Error())
-	//	return
-	//}
-	//fmt.Printf("查询结果:%v\n", row)
-	//fmt.Println("指标5分钟汇总查询测试")
-	//err = stable.NewQuery().Table("test_com_downout").Fields([]string{"sum(traffic) AS traffic"}).Where("time > ?", "2022-07-19 21:51:21").Interval("5m").OrderBy("time DESC").Find(&rs)
-	//if err != nil {
-	//	fmt.Printf("指标5分钟汇总查询错误:%s\n", err.Error())
-	//	return
-	//}
-	//fmt.Printf("汇总查询结果:%v\n", rs)
+	fmt.Printf("查询结果:%v\n", rs)
+	fmt.Println("查询单条结果测试")
+	var row map[string]interface{}
+	err = stable.NewQuery().Table("test_com_downout").Fields([]string{"time", "traffic"}).Where("time > ?", "2022-07-19 21:51:21").OrderBy("time DESC").FindOne(&row)
+	if err != nil {
+		fmt.Printf("指标单条查询错误:%s\n", err.Error())
+		return
+	}
+	fmt.Printf("查询结果:%v\n", row)
+	fmt.Println("指标5分钟汇总查询测试")
+	var rsmap []map[string]interface{}
+	err = stable.NewQuery().Table("test_com_downout").Fields([]string{"sum(traffic) AS trafficSum5m"}).Where("time > ?", "2022-07-19 21:51:21").Interval("5m").OrderBy("time DESC").Find(&rsmap)
+	if err != nil {
+		fmt.Printf("指标5分钟汇总查询错误:%s\n", err.Error())
+		return
+	}
+	fmt.Printf("汇总查询结果:%v\n", rsmap)
 }

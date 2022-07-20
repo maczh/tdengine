@@ -85,6 +85,19 @@ func getValueByTag(obj interface{}, tag string) (interface{}, reflect.Kind, erro
 	return nil, reflect.Int, errors.New("tag not found")
 }
 
+func setValByTag(refVal reflect.Value, refType reflect.Type, tag string, v interface{}) error {
+	//refVal := reflect.ValueOf(obj).Elem()
+	//refType := reflect.TypeOf(obj).Elem()
+	for i := 0; i < refVal.NumField(); i++ {
+		field := refType.Field(i)
+		if tag == field.Tag.Get("td") {
+			refVal.Field(i).Set(reflect.ValueOf(v))
+			return nil
+		}
+	}
+	return errors.New("tag not found")
+}
+
 func setValueByTag(obj interface{}, tag string, v interface{}) error {
 	refVal := reflect.ValueOf(obj).Elem()
 	refType := reflect.TypeOf(obj).Elem()
