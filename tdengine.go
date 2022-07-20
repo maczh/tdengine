@@ -15,6 +15,7 @@ type TDengine struct {
 	Dsn          string  `json:"dsn"`
 	DB           *sql.DB `json:"db"`
 	DatabaseName string  `json:"database"`
+	Debug        bool    `json:"debug"`
 }
 
 type Config struct {
@@ -85,6 +86,11 @@ func (t *TDengine) setIdleTimeout(timeout time.Duration) *TDengine {
 	return t
 }
 
+func (t *TDengine) SetDebug() *TDengine {
+	t.Debug = true
+	return t
+}
+
 func (t *TDengine) Ping() error {
 	if t.DB == nil {
 		logger.Error("TDengine connect first")
@@ -124,6 +130,9 @@ func (t *TDengine) STable(stable string) *Session {
 		tdengine:   t,
 		Database:   t.DatabaseName,
 		SuperTable: stable,
+	}
+	if t.Debug {
+		return session.Debug()
 	}
 	return &session
 }
