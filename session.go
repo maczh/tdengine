@@ -61,7 +61,7 @@ func (s *Session) Fields(fields []string) *Session {
 	return s
 }
 
-func (s *Session) Insert(value interface{}) error {
+func (s *Session) Insert(value Meters) error {
 	if s.table == "" {
 		return errors.New("Table name unseted")
 	}
@@ -74,16 +74,15 @@ func (s *Session) Insert(value interface{}) error {
 		logger.Debug("指标字段:" + toJSON(s.meters))
 	}
 	vals := "("
-	tmp := fmt.Sprintf("%v", value)
-	tmp = strings.Replace(strings.Replace(tmp, "{", "", 1), "}", "", 1)
-	tmpStrs := strings.Split(tmp, " ")
-	obj := reflect.ValueOf(value)
-	for i, v := range tmpStrs {
-		switch obj.Field(i).Kind().String() {
-		case "string":
+	for _, meter := range s.meters {
+		v := value.GetMeter(meter)
+		switch v.(type) {
+		case string:
 			vals += fmt.Sprintf("'%s',", v)
-		default:
-			vals += fmt.Sprintf("%s,", v)
+		case int, int32, int64:
+			vals += fmt.Sprintf("%d,", v)
+		case float32, float64:
+			vals += fmt.Sprintf("%f,", v)
 		}
 	}
 	vals = vals[:len(vals)-1]
@@ -114,7 +113,7 @@ func (s *Session) Insert(value interface{}) error {
 	return err
 }
 
-func (s *Session) InsertBatch(values interface{}) error {
+func (s *Session) InsertBatch(values []Meters) error {
 	if s.table == "" {
 		return errors.New("Table name unseted")
 	}
@@ -128,21 +127,17 @@ func (s *Session) InsertBatch(values interface{}) error {
 	vals := ""
 	//val := []map[string]interface{}{}
 	//fromJSON(toJSON(values), &val)
-	array := reflect.ValueOf(values)
-	for i := 0; i < array.Len(); i++ {
+	for _, value := range values {
 		vals += "("
-		row := array.Index(i).Interface()
-		tmp := fmt.Sprintf("%v", row)
-		logger.Debug("值:" + tmp)
-		tmp = strings.Replace(strings.Replace(tmp, "{", "", 1), "}", "", 1)
-		tmpStrs := strings.Split(tmp, " ")
-		obj := reflect.ValueOf(row)
-		for i, v := range tmpStrs {
-			switch obj.Field(i).Kind().String() {
-			case "string":
+		for _, meter := range s.meters {
+			v := value.GetMeter(meter)
+			switch v.(type) {
+			case string:
 				vals += fmt.Sprintf("'%s',", v)
-			default:
-				vals += fmt.Sprintf("%s,", v)
+			case int, int32, int64:
+				vals += fmt.Sprintf("%d,", v)
+			case float32, float64:
+				vals += fmt.Sprintf("%f,", v)
 			}
 		}
 		vals = vals[:len(vals)-1]
@@ -257,6 +252,9 @@ func (s *Session) generateQuerySql() string {
 }
 
 func (s *Session) Find(result interface{}) error {
+	rs := reflect.ValueOf(result)
+	rsRow := reflect.Indirect(rs)
+	rsRowType := rsRow.Type().Elem()
 	query := s.generateQuerySql()
 	if s.debug {
 		logger.Debug(query)
@@ -266,7 +264,6 @@ func (s *Session) Find(result interface{}) error {
 		return err
 	}
 	defer rows.Close()
-	rsMapList := make([]map[string]interface{}, 0)
 	fields, _ := rows.Columns()
 	fieldCount := len(fields)
 	rowV := make([]interface{}, fieldCount)
@@ -275,17 +272,18 @@ func (s *Session) Find(result interface{}) error {
 		rowValue[i] = &rowV[i]
 	}
 	for rows.Next() {
-		row := make(map[string]interface{})
+		row := reflect.New(rsRowType)
 		err = rows.Scan(rowValue...)
 		if err != nil {
 			logger.Error("数据提取错误:" + err.Error())
 		}
+		setMeter := row.MethodByName("SetMeter")
 		for i, val := range rowV {
-			row[fields[i]] = val
+			args := []reflect.Value{reflect.ValueOf(fields[i]), reflect.ValueOf(val)}
+			setMeter.Call(args)
 		}
-		rsMapList = append(rsMapList, row)
+		rsRow.Set(reflect.Append(rsRow, row.Elem()))
 	}
-	fromJSON(toJSON(rsMapList), &result)
 	if s.debug {
 		//fmt.Printf("TDengin return: %v\n", rsMapList)
 		logger.Debug(toJSON(result))
@@ -295,6 +293,9 @@ func (s *Session) Find(result interface{}) error {
 
 func (s *Session) FindOne(result interface{}) error {
 	s.Limit(1)
+	rs := reflect.ValueOf(result)
+	rsRow := reflect.Indirect(rs)
+	rsRowType := rs.Type().Elem()
 	query := s.generateQuerySql()
 	if s.debug {
 		logger.Debug(query)
@@ -311,21 +312,24 @@ func (s *Session) FindOne(result interface{}) error {
 	for i := 0; i < fieldCount; i++ {
 		rowValue[i] = &rowV[i]
 	}
-	row := make(map[string]interface{})
-	if rows.Next() {
+	for rows.Next() {
+		row := reflect.New(rsRowType)
 		err = rows.Scan(rowValue...)
-		for i, val := range rowV {
-			row[fields[i]] = val
+		if err != nil {
+			logger.Error("数据提取错误:" + err.Error())
 		}
-	} else {
-		return errors.New("not found")
+		setMeter := row.MethodByName("SetMeter")
+		for i, val := range rowV {
+			args := []reflect.Value{reflect.ValueOf(fields[i]), reflect.ValueOf(val)}
+			setMeter.Call(args)
+		}
+		rsRow.Set(row.Elem())
 	}
-	fromJSON(toJSON(row), &result)
 	if s.debug {
-		//fmt.Printf("TDengin return: %v\n", row)
+		//fmt.Printf("TDengin return: %v\n", rsMapList)
 		logger.Debug(toJSON(result))
 	}
-	return nil
+	return err
 }
 
 func (s *Session) DescribeMeters() ([]string, error) {

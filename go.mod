@@ -1,4 +1,4 @@
-module github.com/maczh/tdengine
+module tdengine
 
 go 1.17
 

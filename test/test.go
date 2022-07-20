@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/maczh/tdengine"
 	"math/rand"
+	"tdengine"
 	"time"
 )
 
@@ -12,9 +12,47 @@ type trafficRow struct {
 	Traffic   int64 `json:"traffic"`
 }
 
+func (t *trafficRow) GetMeter(field string) interface{} {
+	switch field {
+	case "time":
+		return t.Timestamp
+	case "traffic":
+		return t.Traffic
+	}
+	return 0
+}
+
+func (t *trafficRow) SetMeter(field string, value interface{}) {
+	switch field {
+	case "time":
+		t.Timestamp = value.(int64)
+	case "traffic":
+		t.Traffic = value.(int64)
+	}
+}
+
 type traffic struct {
-	Timestamp string `json:"time"`
-	Traffic   int64  `json:"traffic"`
+	Timestamp time.Time `json:"time"`
+	Traffic   int64     `json:"traffic"`
+}
+
+func (t *traffic) GetMeter(field string) interface{} {
+	switch field {
+	case "time":
+		return t.Timestamp
+	case "traffic":
+		return t.Traffic
+	}
+	return 0
+}
+
+func (t *traffic) SetMeter(field string, value interface{}) {
+	switch field {
+	case "time":
+		t.Timestamp = value.(time.Time)
+	case "traffic":
+		t.Traffic = value.(int64)
+	}
 }
 
 func main() {
@@ -45,7 +83,7 @@ func main() {
 	table := stable.Table("test_com_downout")
 	for i := 0; i < 9; i++ {
 		err = table.Tags([]interface{}{".test.com", "DownOut"}).
-			Insert(rows[i])
+			Insert(&rows[i])
 		if err != nil {
 			fmt.Printf("单条%v --插入错误:%s\n", rows[i], err.Error())
 		}
@@ -72,7 +110,6 @@ func main() {
 	}
 	fmt.Printf("查询结果:%v\n", row)
 	fmt.Println("指标5分钟汇总查询测试")
-	//var rs1 []map[string]interface{}
 	err = stable.NewQuery().Table("test_com_downout").Fields([]string{"sum(traffic) AS traffic"}).Where("time > ?", "2022-07-19 21:51:21").Interval("5m").OrderBy("time DESC").Find(&rs)
 	if err != nil {
 		fmt.Printf("指标5分钟汇总查询错误:%s\n", err.Error())
