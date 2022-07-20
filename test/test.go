@@ -80,19 +80,19 @@ func main() {
 	}
 	fmt.Println("单条插入测试，连续10条")
 	stable := td.STable("cdn_traffic").Debug()
-	//table := stable.Table("test_com_downout")
-	//for i := 0; i < 9; i++ {
-	//	err = table.Tags([]interface{}{".test.com", "DownOut"}).
-	//		Insert(&rows[i])
-	//	if err != nil {
-	//		fmt.Printf("单条%v --插入错误:%s\n", rows[i], err.Error())
-	//	}
-	//}
-	//fmt.Println("批量插入测试")
-	//err = table.InsertBatch(rows)
-	//if err != nil {
-	//	fmt.Printf("批量插入错误:%s\n", err.Error())
-	//}
+	table := stable.Table("test_com_downout")
+	for i := 0; i < 9; i++ {
+		err = table.Tags([]interface{}{".test.com", "DownOut"}).
+			Insert(&rows[i])
+		if err != nil {
+			fmt.Printf("单条%v --插入错误:%s\n", rows[i], err.Error())
+		}
+	}
+	fmt.Println("批量插入测试")
+	err = table.InsertBatch(rows)
+	if err != nil {
+		fmt.Printf("批量插入错误:%s\n", err.Error())
+	}
 	fmt.Println("指标直接查询测试")
 	var rs []traffic
 	err = stable.NewQuery().Table("test_com_downout").Fields([]string{"time", "traffic"}).Where("time > ?", "2022-07-19 21:51:21").OrderBy("time DESC").Limit(5).Find(&rs)
