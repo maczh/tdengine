@@ -50,13 +50,13 @@ func (t *TDengine) ConnPool(config Config) *TDengine {
 }
 
 func (t *TDengine) connect() error {
-	taos, err := sql.Open("taosSql", t.Dsn)
+	var err error
+	t.DB, err = sql.Open("taosSql", t.Dsn)
 	if err != nil {
 		logger.Error("TDengine connect error:" + err.Error())
 		return err
 	}
-	t.DB = taos
-	return err
+	return nil
 }
 
 func (t *TDengine) setMaxIdelConns(max int) *TDengine {

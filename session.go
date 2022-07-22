@@ -25,6 +25,13 @@ type Session struct {
 	debug      bool
 }
 
+func (s *Session) DebugInfo() {
+	logger.Debug("Session: " + toJSON(s))
+	logger.Debug("tdengine: " + toJSON(s.tdengine))
+	logger.Debug("sql.db:" + toJSON(s.tdengine.DB.Stats()))
+	logger.Debug("table:" + s.table)
+}
+
 func (s *Session) NewQuery() *Session {
 	s.table = ""
 	s.where = ""
@@ -72,11 +79,16 @@ func (s *Session) Insert(value interface{}) error {
 		if err != nil {
 			return err
 		}
-		logger.Debug("指标字段:" + toJSON(s.meters))
 	}
 	vals := "("
+	refVal := reflect.ValueOf(value)
+	refType := reflect.TypeOf(value)
+	if refType.Kind() == reflect.Ptr {
+		refVal = refVal.Elem()
+		refType = refType.Elem()
+	}
 	for _, meter := range s.meters {
-		v, k, err := getValueByTag(value, meter)
+		v, k, err := getValByTag(refVal, refType, meter)
 		if err != nil {
 			logger.Error(err.Error())
 			vals += "null,"
@@ -119,9 +131,9 @@ func (s *Session) Insert(value interface{}) error {
 	} else {
 		strSql = fmt.Sprintf("INSERT INTO %s VALUES %s;", s.table, vals)
 	}
-	if s.debug {
-		logger.Debug(strSql)
-	}
+	//if s.debug {
+	logger.Debug(strSql)
+	//}
 	_, err = s.tdengine.DB.Exec(strSql)
 	return err
 }
