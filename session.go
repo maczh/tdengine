@@ -49,12 +49,12 @@ func (s *Session) Table(table string) *Session {
 	return s
 }
 
-func (s *Session) Tags(tags []interface{}) *Session {
+func (s *Session) Tags(tags ...interface{}) *Session {
 	s.tags = tags
 	return s
 }
 
-func (s *Session) Meters(meters []string) *Session {
+func (s *Session) Meters(meters ...string) *Session {
 	s.meters = meters
 	return s
 }
@@ -64,7 +64,7 @@ func (s *Session) Debug() *Session {
 	return s
 }
 
-func (s *Session) Fields(fields []string) *Session {
+func (s *Session) Fields(fields ...string) *Session {
 	s.fields = fields
 	return s
 }
