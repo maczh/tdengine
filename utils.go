@@ -66,6 +66,7 @@ func getValByTag(refVal reflect.Value, refType reflect.Type, tag string) (interf
 	//refType := reflect.TypeOf(obj).Elem()
 	for i := 0; i < refVal.NumField(); i++ {
 		field := refType.Field(i)
+		logger.Debug("field:" + field.Name + ",tag:" + tag + "tagval:" + field.Tag.Get("td"))
 		if tag == field.Tag.Get("td") {
 			return refVal.Field(i).Interface(), field.Type.Kind(), nil
 		}
@@ -88,6 +89,9 @@ func getValueByTag(obj interface{}, tag string) (interface{}, reflect.Kind, erro
 func setValByTag(refVal reflect.Value, refType reflect.Type, tag string, v interface{}) error {
 	//refVal := reflect.ValueOf(obj).Elem()
 	//refType := reflect.TypeOf(obj).Elem()
+	if v == nil {
+		return nil
+	}
 	for i := 0; i < refVal.NumField(); i++ {
 		field := refType.Field(i)
 		if tag == field.Tag.Get("td") {
