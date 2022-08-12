@@ -22,6 +22,7 @@ type Session struct {
 	interval   string
 	offset     int64
 	limit      int
+	fill       string
 	debug      bool
 }
 
@@ -67,6 +68,14 @@ func (s *Session) Debug() *Session {
 func (s *Session) Fields(fields ...string) *Session {
 	s.fields = fields
 	return s
+}
+
+func (s *Session) Fill(fillType, value string) {
+	if strings.ToUpper(fillType) == "VALUE" {
+		s.fill = fmt.Sprintf("FILL(VALUE,%s) ", value)
+	} else {
+		s.fill = fmt.Sprintf("FILL(%s) ", strings.ToUpper(fillType))
+	}
 }
 
 func (s *Session) Insert(value interface{}) error {
@@ -292,7 +301,7 @@ func (s *Session) generateQuerySql() string {
 			limit += fmt.Sprintf(" OFFSET %d", s.offset)
 		}
 	}
-	querySql := fmt.Sprintf("SELECT %s FROM %s %s %s %s %s %s", fields, table, where, interval, groupBy, orderBy, limit)
+	querySql := fmt.Sprintf("SELECT %s FROM %s %s %s %s %s %s %s", fields, table, where, interval, s.fill, groupBy, orderBy, limit)
 	querySql = strings.TrimRight(querySql, " ") + ";"
 	return querySql
 }
