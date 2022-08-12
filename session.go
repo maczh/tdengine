@@ -42,6 +42,7 @@ func (s *Session) NewQuery() *Session {
 	s.groupBy = ""
 	s.limit = 0
 	s.offset = 0
+	s.fill = ""
 	return s
 }
 
@@ -70,12 +71,13 @@ func (s *Session) Fields(fields ...string) *Session {
 	return s
 }
 
-func (s *Session) Fill(fillType, value string) {
+func (s *Session) Fill(fillType, value string) *Session {
 	if strings.ToUpper(fillType) == "VALUE" {
 		s.fill = fmt.Sprintf("FILL(VALUE,%s) ", value)
 	} else {
 		s.fill = fmt.Sprintf("FILL(%s) ", strings.ToUpper(fillType))
 	}
+	return s
 }
 
 func (s *Session) Insert(value interface{}) error {
