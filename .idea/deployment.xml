@@ -2,7 +2,7 @@
 <project version="4">
   <component name="PublishConfigData" serverName="测试环境" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
-      <paths name="hk01-test">
+      <paths name="hk01-oss">
         <serverdata>
           <mappings>
             <mapping deploy="/opt/go/src/github.com/maczh/tdengine" local="$PROJECT_DIR$" web="/" />

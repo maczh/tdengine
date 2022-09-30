@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sadlil/gologger"
+	_ "github.com/taosdata/driver-go/v2/taosRestful"
 	_ "github.com/taosdata/driver-go/v2/taosSql"
+	"strings"
 	"time"
 )
 
@@ -16,6 +18,7 @@ type TDengine struct {
 	DB           *sql.DB `json:"db"`
 	DatabaseName string  `json:"database"`
 	Debug        bool    `json:"debug"`
+	Type         string  `json:"type"`
 }
 
 type Config struct {
@@ -27,7 +30,11 @@ type Config struct {
 
 func New(dsn string) (*TDengine, error) {
 	tdengine := TDengine{
-		Dsn: dsn,
+		Dsn:  dsn,
+		Type: "taosSql",
+	}
+	if strings.Contains(dsn, "@http") {
+		tdengine.Type = "taosRestful"
 	}
 	err := tdengine.connect()
 	return &tdengine, err
@@ -51,7 +58,8 @@ func (t *TDengine) ConnPool(config Config) *TDengine {
 
 func (t *TDengine) connect() error {
 	var err error
-	t.DB, err = sql.Open("taosSql", t.Dsn)
+	logger.Debug("Connecting type: " + t.Type + "  dsn: " + t.Dsn)
+	t.DB, err = sql.Open(t.Type, t.Dsn)
 	if err != nil {
 		logger.Error("TDengine connect error:" + err.Error())
 		return err
@@ -130,6 +138,9 @@ func (t *TDengine) STable(stable string) *Session {
 		tdengine:   t,
 		Database:   t.DatabaseName,
 		SuperTable: stable,
+	}
+	if t.Type == "taosRestful" {
+		session.SuperTable = fmt.Sprintf("%s.%s", t.DatabaseName, stable)
 	}
 	if t.Debug {
 		return session.Debug()

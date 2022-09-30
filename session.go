@@ -47,7 +47,11 @@ func (s *Session) NewQuery() *Session {
 }
 
 func (s *Session) Table(table string) *Session {
-	s.table = table
+	if s.tdengine.Type == "taosRestful" {
+		s.table = fmt.Sprintf("%s.%s", s.tdengine.DatabaseName, table)
+	} else {
+		s.table = table
+	}
 	return s
 }
 
