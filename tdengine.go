@@ -58,7 +58,6 @@ func (t *TDengine) ConnPool(config Config) *TDengine {
 
 func (t *TDengine) connect() error {
 	var err error
-	logger.Debug("Connecting type: " + t.Type + "  dsn: " + t.Dsn)
 	t.DB, err = sql.Open(t.Type, t.Dsn)
 	if err != nil {
 		logger.Error("TDengine connect error:" + err.Error())
