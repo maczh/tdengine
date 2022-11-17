@@ -136,9 +136,11 @@ func (s *Session) Insert(value interface{}) error {
 			case "string":
 				tags += fmt.Sprintf("'%s',", tag.(string))
 			case "int64", "int", "int32":
-				tags += fmt.Sprintf("%d,", tag.(int64))
+				tags += fmt.Sprintf("%d,", tag)
 			case "float32", "float64":
-				tags += fmt.Sprintf("%f,", tag.(float64))
+				tags += fmt.Sprintf("%v,", tag)
+			default:
+				tags += fmt.Sprintf("%v,", tag)
 			}
 		}
 		tags = tags[:len(tags)-1]
@@ -211,12 +213,12 @@ func (s *Session) InsertBatch(values interface{}) error {
 			switch tag.(type) {
 			case string:
 				tags += fmt.Sprintf("'%s',", tag.(string))
+			case int64, int, int32:
+				tags += fmt.Sprintf("%d,", tag)
 			case float32, float64:
-				if _, ok := tag.(int64); ok {
-					tags += fmt.Sprintf("%d,", tag.(int64))
-				} else {
-					tags += fmt.Sprintf("%f,", tag.(float64))
-				}
+				tags += fmt.Sprintf("%v,", tag)
+			default:
+				tags += fmt.Sprintf("%v,", tag)
 			}
 		}
 		tags = tags[:len(tags)-1]
