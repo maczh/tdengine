@@ -3,8 +3,9 @@
 ## 说明
 - TDengine是国产优秀的时序数据库，比InfluxDB与Prometheus更易于使用，详见https://docs.taosdata.com/ 
 - 本包是在TDengine go client基础上仿GORM进行了简单封装,实现了ORM映射。
-- 使用本包需要事先安装TDengine Client包，目前仅支持Windows与Linux系统。
+- 使用本包需要事先安装TDengine Client包，目前仅支持Windows与Linux系统和macos 10.15以上版本。
 - 使用本包需要配置TDengine服务器的域名，或者在客户端的/etc/hosts中配置服务器的主机名
+- 本包v3版本仅支持TDengine v3.x版本，目前实测支持到v3.0.4版
 
 ## 目前支持的功能
 - 单条数据插入

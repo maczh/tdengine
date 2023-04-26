@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 )
 
 type Session struct {
@@ -104,27 +103,12 @@ func (s *Session) Insert(value interface{}) error {
 		refType = refType.Elem()
 	}
 	for _, meter := range s.meters {
-		v, k, err := getValByTag(refVal, refType, meter)
+		v, _, err := getValByTag(refVal, refType, meter)
 		if err != nil {
 			logger.Error(err.Error())
 			vals += "null,"
 		}
-		switch k.String() {
-		case "struct": //专门针对时间类型
-			if t, ok := v.(time.Time); ok {
-				vals += fmt.Sprintf("%d,", t.UnixMilli())
-			} else {
-				vals += fmt.Sprintf("'%s',", toJSON(v))
-			}
-		case "string":
-			vals += fmt.Sprintf("'%s',", v)
-		case "int", "int32", "int64":
-			vals += fmt.Sprintf("%d,", v)
-		case "float32", "float64":
-			vals += fmt.Sprintf("%f,", v)
-		default:
-			vals += fmt.Sprintf("%v,", v)
-		}
+		vals += fmt.Sprintf("'%s',", anyToString(v))
 	}
 	vals = vals[:len(vals)-1]
 	vals += ")"
@@ -132,17 +116,7 @@ func (s *Session) Insert(value interface{}) error {
 	if s.tags != nil && len(s.tags) > 0 {
 		tags := ""
 		for _, tag := range s.tags {
-			tobj := reflect.ValueOf(tag)
-			switch tobj.Kind().String() {
-			case "string":
-				tags += fmt.Sprintf("'%s',", tag.(string))
-			case "int64", "int", "int32":
-				tags += fmt.Sprintf("%d,", tag)
-			case "float32", "float64":
-				tags += fmt.Sprintf("%v,", tag)
-			default:
-				tags += fmt.Sprintf("%v,", tag)
-			}
+			tags += fmt.Sprintf("'%s',", anyToString(tag))
 		}
 		tags = tags[:len(tags)-1]
 		strSql = fmt.Sprintf("INSERT INTO %s USING %s TAGS (%s) VALUES %s;", s.table, s.SuperTable, tags, vals)
@@ -182,27 +156,12 @@ func (s *Session) InsertBatch(values interface{}) error {
 		value := refValues.Index(i)
 		vals += "("
 		for _, meter := range s.meters {
-			v, k, err := getValByTag(value, value.Type(), meter)
+			v, _, err := getValByTag(value, value.Type(), meter)
 			if err != nil {
 				logger.Error(meter + " " + err.Error())
 				vals += "null,"
 			}
-			switch k.String() {
-			case "struct": //专门针对时间类型
-				if t, ok := v.(time.Time); ok {
-					vals += fmt.Sprintf("%d,", t.UnixMilli())
-				} else {
-					vals += fmt.Sprintf("'%s',", toJSON(v))
-				}
-			case "string":
-				vals += fmt.Sprintf("'%s',", v)
-			case "int", "int32", "int64":
-				vals += fmt.Sprintf("%d,", v)
-			case "float32", "float64":
-				vals += fmt.Sprintf("%f,", v)
-			default:
-				vals += fmt.Sprintf("%v,", v)
-			}
+			vals += fmt.Sprintf("'%s',", anyToString(v))
 		}
 		vals = vals[:len(vals)-1]
 		vals += ") "
@@ -211,16 +170,7 @@ func (s *Session) InsertBatch(values interface{}) error {
 	if s.tags != nil && len(s.tags) > 0 {
 		tags := ""
 		for _, tag := range s.tags {
-			switch tag.(type) {
-			case string:
-				tags += fmt.Sprintf("'%s',", tag.(string))
-			case int64, int, int32:
-				tags += fmt.Sprintf("%d,", tag)
-			case float32, float64:
-				tags += fmt.Sprintf("%v,", tag)
-			default:
-				tags += fmt.Sprintf("%v,", tag)
-			}
+			tags += fmt.Sprintf("%s,", anyToString(tag))
 		}
 		tags = tags[:len(tags)-1]
 		strSql = fmt.Sprintf("INSERT INTO %s USING %s TAGS (%s) VALUES %s;", s.table, s.SuperTable, tags, vals)
@@ -261,18 +211,7 @@ func (s *Session) Limit(limit int) *Session {
 
 func (s *Session) Where(query string, params ...interface{}) *Session {
 	for _, param := range params {
-		switch param.(type) {
-		case string:
-			query = strings.Replace(query, "?", fmt.Sprintf("'%s'", param.(string)), 1)
-		case int, int32, int64:
-			query = strings.Replace(query, "?", fmt.Sprintf("%d", param.(int64)), 1)
-		case float32, float64:
-			query = strings.Replace(query, "?", fmt.Sprintf("%s", param.(float64)), 1)
-		case []interface{}, []int, []int64, []string, []float64, []float32:
-			array := toJSON(param)
-			array = strings.Replace(strings.Replace(array, "[", "", 1), "]", "", 1)
-			query = strings.Replace(query, "?", array, 1)
-		}
+		query = strings.Replace(query, "?", fmt.Sprintf("%s", anyToString(param)), 1)
 	}
 	s.where = query
 	return s
@@ -303,6 +242,10 @@ func (s *Session) generateQuerySql() string {
 	if s.orderBy != "" {
 		orderBy = " ORDER BY " + s.orderBy
 	}
+	partitionBy := ""
+	if s.partitionBy != "" {
+		partitionBy = " PARTITION BY " + s.partitionBy
+	}
 	limit := ""
 	if s.limit != 0 {
 		limit = fmt.Sprintf(" LIMIT %d", s.limit)
@@ -310,7 +253,7 @@ func (s *Session) generateQuerySql() string {
 			limit += fmt.Sprintf(" OFFSET %d", s.offset)
 		}
 	}
-	querySql := fmt.Sprintf("SELECT %s FROM %s %s %s %s %s %s %s", fields, table, where, interval, s.fill, groupBy, orderBy, limit)
+	querySql := fmt.Sprintf("SELECT %s FROM %s %s %s %s %s %s %s %s", fields, table, where, partitionBy, interval, s.fill, groupBy, orderBy, limit)
 	querySql = strings.TrimRight(querySql, " ") + ";"
 	return querySql
 }

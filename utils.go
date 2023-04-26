@@ -52,15 +52,15 @@ func CompactJSON(in string) string {
 	return out.String()
 }
 
-//func toMap(value interface{}) map[string]interface{} {
-//	obj := reflect.ValueOf(value)
-//	result := make(map[string]interface{})
-//	fieldCount := obj.NumField()
-//	for i := 0; i < fieldCount; i++ {
-//		f := obj.Field(i)
-//		result[f.Tag.Get("json")] = f.
+//	func toMap(value interface{}) map[string]interface{} {
+//		obj := reflect.ValueOf(value)
+//		result := make(map[string]interface{})
+//		fieldCount := obj.NumField()
+//		for i := 0; i < fieldCount; i++ {
+//			f := obj.Field(i)
+//			result[f.Tag.Get("json")] = f.
+//		}
 //	}
-//}
 func getValByTag(refVal reflect.Value, refType reflect.Type, tag string) (interface{}, reflect.Kind, error) {
 	//refVal := reflect.ValueOf(obj).Elem()
 	//refType := reflect.TypeOf(obj).Elem()
@@ -87,15 +87,13 @@ func getValueByTag(obj interface{}, tag string) (interface{}, reflect.Kind, erro
 }
 
 func setValByTag(refVal reflect.Value, refType reflect.Type, tag string, v interface{}) error {
-	//refVal := reflect.ValueOf(obj).Elem()
-	//refType := reflect.TypeOf(obj).Elem()
 	if v == nil {
 		return nil
 	}
 	for i := 0; i < refVal.NumField(); i++ {
 		field := refType.Field(i)
 		if tag == field.Tag.Get("td") {
-			refVal.Field(i).Set(reflect.ValueOf(v))
+			refVal.Field(i).Set(reflect.ValueOf(v).Convert(field.Type))
 			return nil
 		}
 	}
@@ -108,7 +106,7 @@ func setValueByTag(obj interface{}, tag string, v interface{}) error {
 	for i := 0; i < refVal.NumField(); i++ {
 		field := refType.Field(i)
 		if tag == field.Tag.Get("td") {
-			refVal.Field(i).Set(reflect.ValueOf(v))
+			refVal.Field(i).Set(reflect.ValueOf(v).Convert(field.Type))
 			return nil
 		}
 	}

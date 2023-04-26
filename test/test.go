@@ -8,7 +8,7 @@ import (
 
 type trafficRow struct {
 	Timestamp time.Time `json:"time" td:"time"`
-	Traffic   int32     `json:"traffic" td:"traffic"`
+	Traffic   uint64    `json:"traffic" td:"traffic"`
 }
 
 //func (t *trafficRow) GetMeter(field string) interface{} {
@@ -32,7 +32,7 @@ type trafficRow struct {
 
 type traffic struct {
 	Timestamp time.Time `json:"time" td:"time"`
-	Traffic   int32     `json:"traffic" td:"traffic"`
+	Traffic   uint64    `json:"traffic" td:"traffic"`
 }
 
 func (t *traffic) GetMeter(field string) interface{} {
@@ -50,7 +50,7 @@ func (t *traffic) SetMeter(field string, value interface{}) {
 	case "time":
 		t.Timestamp = value.(time.Time)
 	case "traffic":
-		t.Traffic = value.(int32)
+		t.Traffic = uint64(value.(int64))
 	}
 }
 
@@ -109,7 +109,7 @@ func main() {
 	}
 	fmt.Printf("查询结果:%v\n", row)
 	fmt.Println("指标5分钟汇总查询测试")
-	var rsmap []map[string]interface{}
+	var rsmap []map[string]any
 	err = stable.NewQuery().Table("test_com_downout").Fields("_wstart AS time,sum(traffic) AS trafficSum5m").Where("time > ?", "2022-07-19 21:51:21").Interval("5m").OrderBy("time DESC").Find(&rsmap)
 	if err != nil {
 		fmt.Printf("指标5分钟汇总查询错误:%s\n", err.Error())

@@ -3,6 +3,8 @@ package tdengine
 import (
 	"fmt"
 	"reflect"
+	"strings"
+	"time"
 )
 
 type Case struct {
@@ -40,40 +42,37 @@ func (c *Case) Else(result any) *Case {
 	return c
 }
 
-func (c *Case) String() string {
+func (c *Case) ToString() string {
 	s := fmt.Sprintf(" CASE %s", c.Expr)
 	for _, w := range c.Whens {
-		switch reflect.TypeOf(w.When).Kind().String() {
-		case "string":
-			s += fmt.Sprintf(" WHEN '%s',", w.When)
-		case "int", "int32", "int64":
-			s += fmt.Sprintf(" WHEN %d,", w.When)
-		case "float32", "float64":
-			s += fmt.Sprintf(" WHEN %f,", w.When)
-		default:
-			s += fmt.Sprintf(" WHEN %f,", w.When)
-		}
-		switch reflect.TypeOf(w.Then).Kind().String() {
-		case "string":
-			s += fmt.Sprintf(" THEN '%s',", w.Then)
-		case "int", "int32", "int64":
-			s += fmt.Sprintf(" THEN %d,", w.Then)
-		case "float32", "float64":
-			s += fmt.Sprintf(" THEN %f,", w.Then)
-		default:
-			s += fmt.Sprintf(" THEN %f,", w.Then)
-		}
+		s += fmt.Sprintf(" WHEN %s THEN %s", anyToString(w.When), anyToString(w.Then))
 	}
-	switch reflect.TypeOf(c.ElseResult).Kind().String() {
-	case "string":
-		s += fmt.Sprintf(" ELSE '%s',", c.ElseResult)
-	case "int", "int32", "int64":
-		s += fmt.Sprintf(" ELSE %d,", c.ElseResult)
-	case "float32", "float64":
-		s += fmt.Sprintf(" ELSE %f,", c.ElseResult)
-	default:
-		s += fmt.Sprintf(" ELSE %f,", c.ElseResult)
-	}
+	s += fmt.Sprintf(" ELSE %s END ", anyToString(c.ElseResult))
+	return s
+}
 
+func anyToString(val any) string {
+	s := ""
+	switch reflect.TypeOf(val).Kind().String() {
+	case "struct": //专门针对时间类型
+		if t, ok := val.(time.Time); ok {
+			s = fmt.Sprintf("%d", t.UnixMilli())
+		} else {
+			s = fmt.Sprintf("'%s'", toJSON(val))
+		}
+	case "map":
+		s = fmt.Sprintf("'%s'", toJSON(val))
+	case "slice", "array":
+		array := toJSON(val)
+		s = strings.Replace(strings.Replace(array, "[", "", 1), "]", "", 1)
+	case "string":
+		s = fmt.Sprintf("'%s'", val)
+	case "int", "int32", "int64", "uint", "uint32", "uint64":
+		s = fmt.Sprintf("%d", val)
+	case "float32", "float64":
+		s = fmt.Sprintf("%f", val)
+	default:
+		s = fmt.Sprintf("%v", val)
+	}
 	return s
 }
