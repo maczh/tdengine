@@ -9,21 +9,22 @@ import (
 )
 
 type Session struct {
-	tdengine   *TDengine
-	Database   string `json:"database"`
-	SuperTable string `json:"stable"`
-	table      string
-	meters     []string      //指标名
-	tags       []interface{} //标签值
-	fields     []string
-	where      string
-	orderBy    string
-	groupBy    string
-	interval   string
-	offset     int64
-	limit      int
-	fill       string
-	debug      bool
+	tdengine    *TDengine
+	Database    string `json:"database"`
+	SuperTable  string `json:"stable"`
+	table       string
+	meters      []string      //指标名
+	tags        []interface{} //标签值
+	fields      []string
+	where       string
+	orderBy     string
+	groupBy     string
+	partitionBy string
+	interval    string
+	offset      int64
+	limit       int
+	fill        string
+	debug       bool
 }
 
 func (s *Session) DebugInfo() {
