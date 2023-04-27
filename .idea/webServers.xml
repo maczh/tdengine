@@ -9,13 +9,6 @@
           </advancedOptions>
         </fileTransfer>
       </webServer>
-      <webServer id="a1f7eaf2-baf9-4711-be18-2541e20c65e0" name="hk01-oss">
-        <fileTransfer accessType="SFTP" host="156.251.17.66" port="51293" sshConfigId="1f988310-7e94-4ff4-95b9-ffb536ed3f71" sshConfig="root@156.251.17.66:51293 password">
-          <advancedOptions>
-            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
-          </advancedOptions>
-        </fileTransfer>
-      </webServer>
     </option>
   </component>
 </project>

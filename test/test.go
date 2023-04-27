@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/maczh/tdengine"
+	"github.com/maczh/tdengine/v3"
 	"time"
 )
 

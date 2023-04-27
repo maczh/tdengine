@@ -108,7 +108,7 @@ func (s *Session) Insert(value interface{}) error {
 			logger.Error(err.Error())
 			vals += "null,"
 		}
-		vals += fmt.Sprintf("'%s',", anyToString(v))
+		vals += fmt.Sprintf("%s,", anyToString(v))
 	}
 	vals = vals[:len(vals)-1]
 	vals += ")"
@@ -161,7 +161,7 @@ func (s *Session) InsertBatch(values interface{}) error {
 				logger.Error(meter + " " + err.Error())
 				vals += "null,"
 			}
-			vals += fmt.Sprintf("'%s',", anyToString(v))
+			vals += fmt.Sprintf("%s,", anyToString(v))
 		}
 		vals = vals[:len(vals)-1]
 		vals += ") "
