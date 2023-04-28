@@ -11,25 +11,6 @@ type trafficRow struct {
 	Traffic   uint64    `json:"traffic" td:"traffic"`
 }
 
-//func (t *trafficRow) GetMeter(field string) interface{} {
-//	switch field {
-//	case "time":
-//		return t.Timestamp
-//	case "traffic":
-//		return t.Traffic
-//	}
-//	return 0
-//}
-//
-//func (t *trafficRow) SetMeter(field string, value interface{}) {
-//	switch field {
-//	case "time":
-//		t.Timestamp = value.(int64)
-//	case "traffic":
-//		t.Traffic = value.(int64)
-//	}
-//}
-
 type traffic struct {
 	Timestamp time.Time `json:"time" td:"time"`
 	Traffic   uint64    `json:"traffic" td:"traffic"`
