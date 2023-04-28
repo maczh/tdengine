@@ -116,7 +116,7 @@ func (s *Session) Insert(value interface{}) error {
 	if s.tags != nil && len(s.tags) > 0 {
 		tags := ""
 		for _, tag := range s.tags {
-			tags += fmt.Sprintf("'%s',", anyToString(tag))
+			tags += fmt.Sprintf("%s,", anyToString(tag))
 		}
 		tags = tags[:len(tags)-1]
 		strSql = fmt.Sprintf("INSERT INTO %s USING %s TAGS (%s) VALUES %s;", s.table, s.SuperTable, tags, vals)
@@ -181,6 +181,48 @@ func (s *Session) InsertBatch(values interface{}) error {
 		logger.Debug(strSql)
 	}
 	_, err = s.tdengine.DB.Exec(strSql)
+	return err
+}
+
+func (s *Session) InsertRows(stable, table string, tags []string, values [][]string) error {
+	if table == "" {
+		return errors.New("Table name unseted")
+	}
+	if stable != "" && (tags == nil || len(tags) == 0) {
+		return errors.New("Use Stable insert,tags must not be null")
+	}
+	if values == nil || len(values) == 0 {
+		return errors.New("values must not be null or empty")
+	}
+	strSql := ""
+	vals := ""
+	for _, value := range values {
+		v := "("
+		for _, val := range value {
+			v += fmt.Sprintf("%s,", val)
+		}
+		v = v[:len(v)-1] + ") "
+		vals += v
+	}
+	if tags != nil && len(tags) > 0 {
+		t := ""
+		for _, tag := range tags {
+			t += fmt.Sprintf("%s,", tag)
+		}
+		t = t[:len(t)-1]
+		strSql = fmt.Sprintf("INSERT INTO %s USING %s TAGS (%s) VALUES %s;", table, stable, t, vals)
+	} else {
+		strSql = fmt.Sprintf("INSERT INTO %s VALUES %s;", table, vals)
+	}
+	if s.debug {
+		logger.Debug(strSql)
+	}
+	_, err := s.tdengine.DB.Exec(strSql)
+	return err
+}
+
+func (s *Session) Exec(sql string, args ...string) error {
+	_, err := s.tdengine.DB.Exec(sql, args)
 	return err
 }
 
