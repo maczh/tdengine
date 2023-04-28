@@ -68,7 +68,7 @@ func main() {
 	}
 	defer td.Close()
 	td = td.ConnPool(config)
-	fmt.Println("插入测试,最近1小时，每5秒一条数据")
+	//fmt.Println("插入测试,最近1小时，每5秒一条数据")
 	//now := time.Now().Add(-1 * time.Hour)
 	//rows := make([]trafficRow, 10)
 	//r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -116,4 +116,13 @@ func main() {
 		return
 	}
 	fmt.Printf("汇总查询结果:%v\n", rsmap)
+
+	//var t trafficRow
+	//rv, rt := reflect.ValueOf(&t).Elem(), reflect.TypeOf(t)
+	//tdengine.setValByTag(rv, rt, "traffic", 100)
+	//fmt.Println(t)
+	//tdengine.setValByTag(rv, rt, "traffic", 200)
+	//fmt.Println(t)
+	//v, _, _ := tdengine.getValByTag(rv, rt, "traffic")
+	//fmt.Println(v)
 }

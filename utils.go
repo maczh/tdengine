@@ -4,9 +4,11 @@ import (
 	"bytes"
 	j "encoding/json"
 	"errors"
+	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"reflect"
 	"strings"
+	"sync"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -62,14 +64,24 @@ func CompactJSON(in string) string {
 //		}
 //	}
 func getValByTag(refVal reflect.Value, refType reflect.Type, tag string) (interface{}, reflect.Kind, error) {
-	//refVal := reflect.ValueOf(obj).Elem()
-	//refType := reflect.TypeOf(obj).Elem()
-	for i := 0; i < refVal.NumField(); i++ {
-		field := refType.Field(i)
-		//logger.Debug("field:" + field.Name + ",tag:" + tag + "tagval:" + field.Tag.Get("td"))
-		if tag == field.Tag.Get("td") {
-			return refVal.Field(i).Interface(), field.Type.Kind(), nil
+	typeCache.RLock()
+	t, ok := typeCache.m[refType]
+	typeCache.RUnlock()
+	if !ok {
+		fieldMap := make(map[string]int, refType.NumField())
+		for i := 0; i < refType.NumField(); i++ {
+			fieldMap[refType.Field(i).Tag.Get("td")] = i
 		}
+		typeCache.Lock()
+		typeCache.m[refType] = fieldMap
+		typeCache.Unlock()
+
+		t = fieldMap
+	}
+
+	if index, ok := t[tag]; ok {
+		field := refVal.Field(index)
+		return field.Interface(), field.Type().Kind(), nil
 	}
 	return nil, reflect.Int, errors.New("tag not found")
 }
@@ -90,15 +102,39 @@ func setValByTag(refVal reflect.Value, refType reflect.Type, tag string, v inter
 	if v == nil {
 		return nil
 	}
-	for i := 0; i < refVal.NumField(); i++ {
-		field := refType.Field(i)
-		if tag == field.Tag.Get("td") {
-			refVal.Field(i).Set(reflect.ValueOf(v).Convert(field.Type))
+
+	typeCache.RLock()
+	t, ok := typeCache.m[refType]
+	typeCache.RUnlock()
+
+	if !ok {
+		fieldMap := make(map[string]int, refType.NumField())
+		for i := 0; i < refType.NumField(); i++ {
+			fieldMap[refType.Field(i).Tag.Get("td")] = i
+		}
+		typeCache.Lock()
+		typeCache.m[refType] = fieldMap
+		typeCache.Unlock()
+
+		t = fieldMap
+	}
+
+	if index, ok := t[tag]; ok {
+		field := refVal.Field(index)
+		if field.CanSet() {
+			field.Set(reflect.ValueOf(v).Convert(field.Type()))
 			return nil
+		} else {
+			return fmt.Errorf("field %v cannot be set", field)
 		}
 	}
 	return errors.New("tag not found")
 }
+
+var typeCache = struct {
+	sync.RWMutex
+	m map[reflect.Type]map[string]int
+}{m: make(map[reflect.Type]map[string]int)}
 
 func setValueByTag(obj interface{}, tag string, v interface{}) error {
 	refVal := reflect.ValueOf(obj).Elem()
